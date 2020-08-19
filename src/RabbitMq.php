@@ -12,7 +12,7 @@ class RabbitMq implements IMQ
     //保存类实例的静态成员变量
     static private $_instance;
     static private $_conn;
-    static private $amp ;
+    static private $_channel;
     static private $route = 'key_1';
     static private $q ;
     static private $ex ;
@@ -20,7 +20,6 @@ class RabbitMq implements IMQ
 
     public static function getInstance(){
         $config = Config::get('rabbitmq');
-        var_dump($config); exit();
 
         if (!(self::$_instance instanceof self)) {
             self::$_instance = new self($config);
@@ -29,53 +28,46 @@ class RabbitMq implements IMQ
         return self::$_instance;
     }
 
-    private function __construct($conn)
+    private function __construct($config)
     {
         //创建连接和channel
-        $conn = new AMQPConnection($conn);
-        if(!$conn->connect()) {
+        self::$_conn = new \AMQPConnection($config);
+        if(!self::$_conn->connect()) {
             die("Cannot connect to the broker!\n");
         }
-        self::$_conn = new AMQPChannel($conn);
-        self::$amp = $conn;
+        self::$_channel = new \AMQPChannel(self::$_conn);
     }
-    /* *
-     *
-     * parm 交换机名
-     * parm 队列名
-     *
-     * */
+
+    /**
+     * @param $exchangeName 交换机名
+     * @param $queuename 队列名
+     * @return mixed
+     */
     public function listen($exchangeName,$queuename){
         self::$queue = $queuename;
-        return $this->setExchange($exchangeName,$queuename);
+        $this->setExchange($exchangeName,$queuename);
+        return self::$_instance;
     }
 
-    //连接交换机
+    // 创建交换机
     public function setExchange($exchangeName,$queueName){
-        //创建交换机
-        $ex = new AMQPExchange(self::$_conn);
-        self::$ex = $ex;
-        $ex->setName($exchangeName);
-
-        $ex->setType(AMQP_EX_TYPE_DIRECT); //direct类型
-        $ex->setFlags(AMQP_DURABLE); //持久化
-        $ex->declare();
+        self::$ex = new \AMQPExchange(self::$_channel);
+        self::$ex->setName($exchangeName);
+        self::$ex->setType(AMQP_EX_TYPE_DIRECT); //direct类型
+        self::$ex->setFlags(AMQP_DURABLE); //持久化
+        self::$ex->declareExchange();
         return self::setQueue($queueName,$exchangeName);
     }
 
-    //创建队列
+    // 创建队列
     private static function setQueue($queueName,$exchangeName){
-        //  创建队列
-        $q = new AMQPQueue(self::$_conn);
-        $q->setName($queueName);
-        $q->setFlags(AMQP_DURABLE);
-        $q->declareQueue();
-
+        self::$q = new \AMQPQueue(self::$_channel);
+        self::$q->setName($queueName);
+        self::$q->setFlags(AMQP_DURABLE);
+        self::$q->declareQueue();
         // 用于绑定队列和交换机
-        $routingKey = self::$route;
-        $q->bind($exchangeName,  $routingKey);
-        self::$q = $q;
-        return(self::$_instance);
+        self::$q->bind($exchangeName,  self::$route);
+        return self::$_instance;
     }
 
     /*
@@ -89,9 +81,9 @@ class RabbitMq implements IMQ
             $queue->ack($envelope->getDeliveryTag());//手动应答
         }
      */
-    public function run($func, $autoack = True){
+    public function run($func, $autoack = true){
         if (!$func || !self::$q) return False;
-        while(True){
+        while(true){
             if ($autoack) {
                 if(!self::$q->consume($func, AMQP_AUTOACK)){
                     // self::$q->ack($envelope->getDeliveryTag());
@@ -102,12 +94,26 @@ class RabbitMq implements IMQ
         }
     }
 
+    /**
+     * 推送消息
+     * @param string $msg
+     * @return bool
+     */
+    public function pushlish(string $msg):bool {
 
-    private static function closeConn(){
-        self::$amp->disconnect();
-    }
+        if (self::$ex->publish(date('H:i:s') . $msg, self::$route)) {
+            // 发送成功
+            echo "发送成功";
+            return true;
+        }else{
+            // 发送失败
+            echo "发送失败";
+            return false;
+        }
 
-    public function pushlish($msg){
+        self::closeConn();
+
+        /*
         while (1) {
             sleep(1);
             if (self::$ex->publish(date('H:i:s') . "用户" . "注册", self::$route)) {
@@ -115,13 +121,20 @@ class RabbitMq implements IMQ
                 echo $msg;
             }
         }
+        */
     }
+
+    //
+    private static function closeConn(){
+        self::$conn->disconnect();
+    }
+
+
 
     //__clone方法防止对象被复制克隆
     public function __clone()
     {
         trigger_error('Clone is not allow!', E_USER_ERROR);
     }
-
 
 }
