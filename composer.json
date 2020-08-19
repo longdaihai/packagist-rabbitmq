@@ -1,0 +1,21 @@
+{
+    "name": "longdaihai/rabbitmq",
+    "description": "rabbitmq bot plugin",
+    "type": "library",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "HanSheng",
+            "email": "164897033@qq.com"
+        }
+    ],
+    "minimum-stability": "dev",
+    "require": {
+        "php": ">=7.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "longdaihai\\rabbitmq\\": "src"
+        }
+    }
+}
