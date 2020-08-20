@@ -20,6 +20,9 @@ class RabbitMq implements IMQ
 
     public static function getInstance(){
         $config = Config::get('rabbitmq');
+        if (empty($config)){
+            throw new \Exception('rabbitmq.php 配置文件不存在或配置为空');
+        }
 
         if (!(self::$_instance instanceof self)) {
             self::$_instance = new self($config);
@@ -72,7 +75,7 @@ class RabbitMq implements IMQ
 
     /*
      * 消费者
-     * $fun_name = array($classobj,$function) or function name string
+     * $func = [$classobj,$function] or function name string
      * $autoack 是否自动应答
      *
      * function processMessage($envelope, $queue) {
@@ -86,8 +89,8 @@ class RabbitMq implements IMQ
         while(true){
             if ($autoack) {
                 if(!self::$q->consume($func, AMQP_AUTOACK)){
-                    // self::$q->ack($envelope->getDeliveryTag());
-                    //失败之后会默认进入 noack 队列。下次重新开启会再次调用，目前还不清楚 回调配置应该这里做一个失败反馈
+                    // $queue->ack($envelope->getDeliveryTag()); 在 $func 方法中使用
+                    // 失败之后会默认进入 noack 队列。下次重新开启会再次调用，目前还不清楚 回调配置应该这里做一个失败反馈
                 }
             }
             self::$q->consume($func);
@@ -103,14 +106,11 @@ class RabbitMq implements IMQ
 
         if (self::$ex->publish(date('H:i:s') . $msg, self::$route)) {
             // 发送成功
-            echo "发送成功";
             return true;
         }else{
             // 发送失败
-            echo "发送失败";
             return false;
         }
-
         self::closeConn();
 
         /*
