@@ -6,6 +6,7 @@
 namespace longdaihai\rabbitmq;
 
 use think\facade\Config;
+use PhpAmqpLib\Connection\AMQPStreamConnection;
 
 class RabbitMq implements IMQ
 {

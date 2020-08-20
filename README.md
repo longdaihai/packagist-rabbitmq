@@ -6,4 +6,4 @@ php plugin for
 composer require longdaihai/rabbitmq
 ```
 
-## use
+## 使用
