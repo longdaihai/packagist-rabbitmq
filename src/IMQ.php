@@ -7,5 +7,5 @@ namespace longdaihai\rabbitmq;
 
 interface IMQ
 {
-    public static function getInstance();
+    public static function getInstance($queueName);
 }

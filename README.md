@@ -1,5 +1,5 @@
 # ding-bot
-php plugin for 
+php plugin for thinkphp6
 
 ## 安装
 ```
