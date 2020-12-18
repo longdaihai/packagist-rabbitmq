@@ -38,10 +38,9 @@ class RabbitMq implements IMQ
      * @return RabbitMq
      * @throws \Exception
      */
-    public static function getInstance($queueName = 'default'){
-        $conf = Config::get('rabbitmq');
+    public static function getInstance($conf,$queueName = 'default'){
         if (empty($conf)){
-            throw new \Exception('rabbitmq.php 配置文件不存在或配置为空');
+            throw new \Exception('配置信息为空');
         }
 
         // 初始化列队名
